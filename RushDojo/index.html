@@ -1,1 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RushDojo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #1e293b;
+      color: #f1f5f9;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      font-weight: bold;
+      font-family: 'Permanent Marker', cursive;
+      font-size: 64px;
+    }
+    .timer {
+      text-align: center;
+      margin: 20px 0;
+    }
+    .time {
+      font-size: 48px;
+      margin: 10px 0;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .start { background: #22c55e; color: #fff; }
+    .pause { background: #3b82f6; color: #fff; }
+    .reset { background: #ef4444; color: #fff; }
+    .streak, .completed {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 18px;
+    }
+    .break {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 18px;
+      color: #f59e0b;
+    }
+    .tasks {
+      margin-top: 30px;
+    }
+    .tasks input {
+      padding: 8px;
+      width: 70%;
+      border-radius: 6px;
+      border: 1px solid #334155;
+    }
+    .tasks button {
+      background: #f59e0b;
+      color: #fff;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      background: #334155;
+      margin: 5px 0;
+      padding: 10px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    li.done { text-decoration: line-through; color: #9ca3af; }
+    .duration { font-size: 12px; color: #9ca3af; margin-left: 10px; }
+  </style>
+</head>
+<body>
+  <h1>
+    <span style="color:red;">Rush</span><span style="color:#BA931B;">Dojo</span>
+  </h1>
 
+  <div class="timer">
+    <div class="time" id="time">25:00</div>
+    <button class="start" onclick="startTimer()">Start</button>
+    <button class="pause" onclick="pauseTimer()">Pause</button>
+    <button class="reset" onclick="resetTimer()">Reset</button>
+  </div>
+
+  <div class="break" id="breakDisplay"></div>
+
+  <div class="streak" id="streakDisplay">Streak: 0 day(s)</div>
+  <div class="completed" id="completedDisplay">Completed Tasks: 0</div>
+
+  <div style="text-align:center; margin-top:15px;">
+   <button onclick="openAchievements()">View Achievements</button>
+  </div>
+
+  <div class="tasks">
+    <h2>Tasks</h2>
+    <input id="taskInput" placeholder="Enter a task...">
+    <button onclick="addTask()">Add</button>
+    <ul id="taskList"></ul>
+  </div>
+
+  <script>
+    // --- Timer ---
+    let focusMinutes = 25;
+    let seconds = focusMinutes * 60;
+    let timer;
+    let running = false;
+
+    let breakTimer;
+    let breakSeconds = 0;
+
+    function updateDisplay() {
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      document.getElementById("time").textContent =
+        `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+    }
+
+    function tick() {
+      if (seconds > 0) {
+        seconds--;
+        updateDisplay();
+        saveTimer();
+      } else {
+        clearInterval(timer);
+        running = false;
+        saveTimer();
+        startBreak(); // trigger break reminder
+      }
+    }
+
+    function startTimer() {
+      if (!running) {
+        timer = setInterval(tick, 1000);
+        running = true;
+        saveTimer();
+      }
+    }
+
+    function pauseTimer() {
+      clearInterval(timer);
+      running = false;
+      saveTimer();
+    }
+
+    function resetTimer() {
+      clearInterval(timer);
+      running = false;
+      seconds = focusMinutes * 60;
+      updateDisplay();
+      saveTimer();
+    }
+
+    // --- Break reminder ---
+    function startBreak() {
+      breakSeconds = 5 * 60; // 5 minutes
+      document.getElementById("breakDisplay").textContent = "Break: 05:00";
+      breakTimer = setInterval(breakTick, 1000);
+    }
+
+    function breakTick() {
+      if (breakSeconds > 0) {
+        breakSeconds--;
+        const m = Math.floor(breakSeconds / 60);
+        const s = breakSeconds % 60;
+        document.getElementById("breakDisplay").textContent =
+          `Break: ${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+      } else {
+        clearInterval(breakTimer);
+        document.getElementById("breakDisplay").textContent = "Break finished! Ready for next sprint.";
+      }
+    }
+        // --- Timer persistence ---
+    function saveTimer() {
+      localStorage.setItem("rushdojoTimer", JSON.stringify({
+        seconds: seconds,
+        running: running
+      }));
+    }
+
+    function loadTimer() {
+      const data = localStorage.getItem("rushdojoTimer");
+      if (!data) {
+        updateDisplay();
+        return;
+      }
+      const state = JSON.parse(data);
+      seconds = Number.isFinite(state.seconds) ? state.seconds : focusMinutes * 60;
+      running = !!state.running;
+      updateDisplay();
+      if (running) {
+        timer = setInterval(tick, 1000);
+      }
+    }
+
+    // --- Streak tracking ---
+    let streak = 0;
+    let lastCompletedDate = null;
+
+    function saveStreak() {
+      localStorage.setItem("rushdojoStreak", JSON.stringify({ streak, lastCompletedDate }));
+    }
+
+    function loadStreak() {
+      const data = localStorage.getItem("rushdojoStreak");
+      if (data) {
+        const state = JSON.parse(data);
+        streak = state.streak || 0;
+        lastCompletedDate = state.lastCompletedDate || null;
+      }
+      updateStreakDisplay();
+    }
+
+    function updateStreakDisplay() {
+      document.getElementById("streakDisplay").textContent = `Streak: ${streak} day(s)`;
+    }
+
+    // --- Completed counter ---
+    let completedCount = 0;
+
+    function saveCompletedCount() {
+      localStorage.setItem("rushdojoCompletedCount", String(completedCount));
+    }
+
+    function loadCompletedCount() {
+      const data = localStorage.getItem("rushdojoCompletedCount");
+      completedCount = data ? parseInt(data, 10) : 0;
+      updateCompletedDisplay();
+    }
+
+    function updateCompletedDisplay() {
+      document.getElementById("completedDisplay").textContent = `Completed Tasks: ${completedCount}`;
+    }
+
+    // --- Tasks with localStorage ---
+    function saveTasks() {
+      const tasks = [];
+      document.querySelectorAll("#taskList li").forEach(li => {
+        tasks.push({
+          text: li.querySelector("span").textContent,
+          createdAt: li.dataset.createdAt,
+          done: li.classList.contains("done"),
+          duration: li.querySelector(".duration").textContent
+        });
+      });
+      localStorage.setItem("rushdojoTasks", JSON.stringify(tasks));
+    }
+
+    function loadTasks() {
+      const data = localStorage.getItem("rushdojoTasks");
+      if (!data) return;
+      const tasks = JSON.parse(data);
+      tasks.forEach(task => {
+        const li = document.createElement("li");
+        li.dataset.createdAt = task.createdAt;
+        li.className = task.done ? "done" : "";
+        li.innerHTML = `<span>${task.text}</span>
+          <button onclick="toggleDone(this)">Done</button>
+          <button onclick="removeTask(this)">Delete</button>
+          <span class="duration">${task.duration}</span>`;
+        document.getElementById("taskList").appendChild(li);
+      });
+    }
+
+    function addTask() {
+      const input = document.getElementById("taskInput");
+      const text = input.value.trim();
+      if (!text) return;
+
+      const createdAt = Date.now();
+      const li = document.createElement("li");
+      li.dataset.createdAt = String(createdAt);
+      li.innerHTML = `<span>${text}</span>
+        <button onclick="toggleDone(this)">Done</button>
+        <button onclick="removeTask(this)">Delete</button>
+        <span class="duration"></span>`;
+      document.getElementById("taskList").appendChild(li);
+      input.value = "";
+      saveTasks();
+    }
+
+    function toggleDone(btn) {
+      const li = btn.parentElement;
+      li.classList.toggle("done");
+
+      if (li.classList.contains("done")) {
+        const createdAt = parseInt(li.dataset.createdAt, 10);
+        const finishedAt = Date.now();
+        const minutes = Math.round((finishedAt - createdAt) / 60000);
+        li.querySelector(".duration").textContent = ` • Finished in ${minutes} min`;
+
+        // Increment completed counter
+        completedCount++;
+        updateCompletedDisplay();
+        saveCompletedCount();
+
+        // Streak logic
+        const todayStr = new Date().toDateString();
+        if (lastCompletedDate === todayStr) {
+          // already counted today
+        } else if (lastCompletedDate) {
+          const lastDate = new Date(lastCompletedDate);
+          const todayDate = new Date(todayStr);
+          const diffDays = Math.floor((todayDate - lastDate) / (1000 * 60 * 60 * 24));
+          if (diffDays === 1) {
+            streak++;
+          } else {
+            streak = 1;
+          }
+        } else {
+          streak = 1;
+        }
+        lastCompletedDate = todayStr;
+        updateStreakDisplay();
+        saveStreak();
+
+      } else {
+        li.querySelector(".duration").textContent = "";
+      }
+      saveTasks();
+    }
+
+    function removeTask(btn) {
+      const li = btn.parentElement;
+      li.remove();
+      saveTasks();
+    }
+
+    function openAchievements() {
+       window.open("achievements.html", "Achievements", "width=400,height=600");
+    }
+
+    // Load everything on startup
+    window.onload = () => {
+      loadTasks();
+      loadTimer();
+      loadStreak();
+      loadCompletedCount();
+    };
+  </script>
+</body>
+</html>
