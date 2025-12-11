@@ -1,1 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RushDojo Achievements</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111827;
+      color: #f1f5f9;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      font-family: 'Permanent Marker', cursive;
+      font-size: 36px;
+      margin-bottom: 20px;
+    }
+    .badge {
+      background: #1f2937;
+      margin: 10px 0;
+      padding: 15px;
+      border-radius: 8px;
+    }
+    .unlocked {
+      border: 2px solid #22c55e;
+    }
+    .locked {
+      border: 2px solid #6b7280;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+  <h1>Achievements</h1>
+  <div id="achievementsList"></div>
 
+  <script>
+    function loadAchievements() {
+      const streakData = JSON.parse(localStorage.getItem("rushdojoStreak")) || { streak: 0 };
+      const completedCount = parseInt(localStorage.getItem("rushdojoCompletedCount")) || 0;
+
+      const achievements = [
+        { name: "First Task", unlocked: completedCount >= 1 },
+        { name: "10 Tasks", unlocked: completedCount >= 10 },
+        { name: "50 Tasks", unlocked: completedCount >= 50 },
+        { name: "First Streak", unlocked: streakData.streak >= 1 },
+        { name: "7-Day Streak", unlocked: streakData.streak >= 7 },
+        { name: "30-Day Streak", unlocked: streakData.streak >= 30 }
+      ];
+
+      const list = document.getElementById("achievementsList");
+      achievements.forEach(a => {
+        const div = document.createElement("div");
+        div.className = "badge " + (a.unlocked ? "unlocked" : "locked");
+        div.textContent = a.unlocked ? `🏅 ${a.name} — Unlocked!` : `🔒 ${a.name}`;
+        list.appendChild(div);
+      });
+    }
+
+    loadAchievements();
+  </script>
+</body>
+</html>
