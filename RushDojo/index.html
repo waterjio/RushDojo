@@ -99,6 +99,10 @@
    <button onclick="openAchievements()">View Achievements</button>
   </div>
 
+  <div style="text-align:center; margin-top:10px;">
+    <button class="reset" onclick="resetRushDojo()">Reset All Data</button>
+  </div>
+
   <div class="tasks">
     <h2>Tasks</h2>
     <input id="taskInput" placeholder="Enter a task...">
@@ -344,6 +348,18 @@
       loadStreak();
       loadCompletedCount();
     };
+
+  function resetRushDojo() {
+  localStorage.removeItem("rushdojoTimer");
+  localStorage.removeItem("rushdojoStreak");
+  localStorage.removeItem("rushdojoCompletedCount");
+  localStorage.removeItem("rushdojoTasks");
+
+  document.getElementById("breakDisplay").textContent = "";
+
+  location.reload();
+}
+
   </script>
 </body>
 </html>
